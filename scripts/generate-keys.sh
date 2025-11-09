@@ -17,34 +17,26 @@ echo ""
 API_KEY=$(openssl rand -base64 32 | tr -d '\n')
 OPENMEMORY_KEY=$(openssl rand -base64 32 | tr -d '\n')
 
-# Backup existing .env files if they exist
+# Backup existing .env file if it exists
 if [ -f ".env" ]; then
     echo -e "${YELLOW}📦 Backing up existing .env${NC}"
     cp .env ".env.backup.$(date +%Y%m%d_%H%M%S)"
 fi
 
-if [ -f ".env.openmemory" ]; then
-    echo -e "${YELLOW}📦 Backing up existing .env.openmemory${NC}"
-    cp .env.openmemory ".env.openmemory.backup.$(date +%Y%m%d_%H%M%S)"
-fi
-
-# Create new .env file
+# Create unified .env file with both keys
 cat > .env << EOF
-# API Key for authenticating requests to scrapers
+# API Keys for Docker Scrapers
 # Generated: $(date)
-API_KEY=${API_KEY}
-EOF
 
-# Create new .env.openmemory file
-cat > .env.openmemory << EOF
+# API Key for authenticating requests to scrapers
+API_KEY=${API_KEY}
+
 # OpenMemory API Key for authentication
-# Generated: $(date)
 OPENMEMORY_API_KEY=${OPENMEMORY_KEY}
 EOF
 
 # Set proper permissions
 chmod 600 .env
-chmod 600 .env.openmemory
 
 echo -e "${GREEN}✅ Generated secure API keys!${NC}"
 echo ""
@@ -54,8 +46,8 @@ echo ""
 echo -e "${GREEN}OPENMEMORY_API_KEY:${NC}"
 echo "$OPENMEMORY_KEY"
 echo ""
-echo -e "${YELLOW}⚠️  Keys saved to .env and .env.openmemory${NC}"
-echo -e "${YELLOW}⚠️  Old keys backed up with timestamp${NC}"
+echo -e "${YELLOW}⚠️  Keys saved to .env${NC}"
+echo -e "${YELLOW}⚠️  Old .env backed up with timestamp${NC}"
 echo ""
 echo -e "${YELLOW}📝 Next steps:${NC}"
 echo "1. Restart services: docker-compose restart"
