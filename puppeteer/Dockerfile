@@ -26,17 +26,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# CRITICAL: Set Puppeteer ENV BEFORE npm install
+# Puppeteer config (must be before npm install)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --production
 
 # Copy application files
 COPY . .
 
+# Expose port
 EXPOSE 3002
 
+# Start server
 CMD ["node", "server.js"]
