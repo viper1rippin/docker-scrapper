@@ -1,0 +1,82 @@
+name: Deploy to Vultr
+
+on:
+  workflow_dispatch:
+    inputs:
+      vultr_host:
+        description: 'Vultr server IP address'
+        required: false
+      vultr_user:
+        description: 'SSH username'
+        required: false
+        default: 'root'
+  push:
+    branches: [main]
+    paths:
+      - 'nginx/**'
+      - 'playwright/**'
+      - 'puppeteer/**'
+      - 'selenium/**'
+      - 'universal/**'
+      - 'scripts/**'
+      - 'docker-compose.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Vultr
+        env:
+          VULTR_HOST: ${{ github.event.inputs.vultr_host || secrets.VULTR_HOST }}
+          VULTR_USER: ${{ github.event.inputs.vultr_user || secrets.VULTR_USER || 'root' }}
+          SSH_PRIVATE_KEY: ${{ secrets.VULTR_SSH_KEY }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/vultr_key
+          chmod 600 ~/.ssh/vultr_key
+          ssh-keyscan -H $VULTR_HOST >> ~/.ssh/known_hosts
+
+          # Deploy files
+          echo "📦 Deploying to $VULTR_HOST..."
+          
+          # Create deployment directory
+          ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST "mkdir -p /opt/docker-scrapers"
+          
+          # Copy all files
+          scp -i ~/.ssh/vultr_key -r \
+            nginx playwright puppeteer selenium universal scripts \
+            docker-compose.yml \
+            $VULTR_USER@$VULTR_HOST:/opt/docker-scrapers/
+          
+          # Generate keys if not exist and start services
+          ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST << 'ENDSSH'
+            cd /opt/docker-scrapers
+            
+            # Generate API keys if .env doesn't exist
+            if [ ! -f .env ]; then
+              echo "🔑 Generating API keys..."
+              bash scripts/generate-keys.sh
+            fi
+            
+            # Start services
+            echo "🚀 Starting services..."
+            docker-compose down
+            docker-compose up -d --build
+            
+            echo "✅ Deployment complete!"
+            docker-compose ps
+ENDSSH
+
+      - name: Verify deployment
+        env:
+          VULTR_HOST: ${{ github.event.inputs.vultr_host || secrets.VULTR_HOST }}
+          VULTR_USER: ${{ github.event.inputs.vultr_user || secrets.VULTR_USER || 'root' }}
+          SSH_PRIVATE_KEY: ${{ secrets.VULTR_SSH_KEY }}
+        run: |
+          ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST "cd /opt/docker-scrapers && docker-compose ps"
+          echo "✅ Services running at http://$VULTR_HOST"
