@@ -35,36 +35,52 @@ jobs:
           VULTR_USER: ${{ github.event.inputs.vultr_user || secrets.VULTR_USER || 'root' }}
           SSH_PRIVATE_KEY: ${{ secrets.VULTR_SSH_KEY }}
         run: |
+          # Setup SSH
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/vultr_key
           chmod 600 ~/.ssh/vultr_key
           ssh-keyscan -H $VULTR_HOST >> ~/.ssh/known_hosts
-          
+
+          # Deploy files
           echo "📦 Deploying to $VULTR_HOST..."
           
+          # Create deployment directory
           ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST "mkdir -p /opt/docker-scrapers"
           
+          # Copy all files
           scp -i ~/.ssh/vultr_key -r \
             nginx playwright puppeteer selenium universal scripts \
             docker-compose.yml install-docker-vultr.sh \
             DEPLOYMENT.md README.md \
             $VULTR_USER@$VULTR_HOST:/opt/docker-scrapers/
           
-          ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST bash -s << 'ENDSSH'
-          cd /opt/docker-scrapers
-          
-          if [ ! -f .env ]; then
-            echo "🔑 Generating API keys..."
-            bash scripts/generate-keys.sh
-          fi
-          
-          echo "🚀 Starting services..."
-          docker-compose down
-          docker-compose up -d --build
-          
-          echo "✅ Deployment complete!"
-          docker-compose ps
-          ENDSSH
+          # Generate keys if not exist and start services
+          ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST << 'ENDSSH'
+            cd /opt/docker-scrapers
+            
+            # Generate API keys if .env doesn't exist
+            if [ ! -f .env ]; then
+              echo "🔑 Generating API keys..."
+              bash scripts/generate-keys.sh
+            fi
+            
+            # Clone OpenMemory if not exists
+            if [ ! -d "openmemory-src" ]; then
+              echo "📦 Cloning OpenMemory from GitHub..."
+              git clone https://github.com/CaviraOSS/OpenMemory.git openmemory-src
+              echo "✅ OpenMemory source cloned"
+            else
+              echo "✅ OpenMemory source already exists"
+            fi
+            
+            # Start services
+            echo "🚀 Starting services..."
+            docker-compose down
+            docker-compose up -d --build
+            
+            echo "✅ Deployment complete!"
+            docker-compose ps
+ENDSSH
 
       - name: Verify deployment
         env:
