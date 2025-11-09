@@ -81,7 +81,6 @@ jobs:
             echo "✅ Deployment complete!"
             docker-compose ps
 ENDSSH
-
       - name: Verify deployment
         env:
           VULTR_HOST: ${{ github.event.inputs.vultr_host || secrets.VULTR_HOST }}
