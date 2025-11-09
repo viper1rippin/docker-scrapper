@@ -12,15 +12,41 @@ services:
       - playwright
       - puppeteer
       - selenium
-      - universal  # ← Changed from universal-sandbox
+      - universal
+      - openmemory
     restart: always
     networks:
       - scraper-network
 
-  # ... other services ...
+  playwright:
+    build: ./playwright
+    environment:
+      - API_KEY=${API_KEY}
+    restart: always
+    shm_size: 2gb
+    networks:
+      - scraper-network
 
-  universal:  # ← Changed from universal-sandbox
-    build: ./universal  # ← Changed from ./universal-sandbox
+  puppeteer:
+    build: ./puppeteer
+    environment:
+      - API_KEY=${API_KEY}
+    restart: always
+    shm_size: 2gb
+    networks:
+      - scraper-network
+
+  selenium:
+    build: ./selenium
+    environment:
+      - API_KEY=${API_KEY}
+    restart: always
+    shm_size: 2gb
+    networks:
+      - scraper-network
+
+  universal:
+    build: ./universal
     environment:
       - API_KEY=${API_KEY}
       - PORT=8000
@@ -30,6 +56,29 @@ services:
       - /tmp/scrapers:/tmp/scrapers
     networks:
       - scraper-network
+
+  openmemory:
+    build:
+      context: ./openmemory-src
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.openmemory
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - openmemory_data:/app/data
+    networks:
+      - scraper-network
+
+volumes:
+  openmemory_data:
+    driver: local
 
 networks:
   scraper-network:
