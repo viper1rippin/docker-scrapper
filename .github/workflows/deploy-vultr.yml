@@ -51,33 +51,32 @@ jobs:
             DEPLOYMENT.md README.md \
             $VULTR_USER@$VULTR_HOST:/opt/docker-scrapers/
 
-          # Run remote commands
+          # Run remote commands on the server
           ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST <<'ENDSSH'
-cd /opt/docker-scrapers
+          cd /opt/docker-scrapers
 
-# Generate API keys if .env doesn't exist
-if [ ! -f .env ]; then
-  echo "🔑 Generating API keys..."
-  bash scripts/generate-keys.sh
-fi
+          # Generate API keys if .env doesn't exist
+          if [ ! -f .env ]; then
+            echo "🔑 Generating API keys..."
+            bash scripts/generate-keys.sh
+          fi
 
-# Clone OpenMemory if not exists
-if [ ! -d "openmemory-src" ]; then
-  echo "📦 Cloning OpenMemory from GitHub..."
-  git clone https://github.com/CaviraOSS/OpenMemory.git openmemory-src
-  echo "✅ OpenMemory source cloned"
-else
-  echo "✅ OpenMemory source already exists"
-fi
+          # Clone OpenMemory if not exists
+          if [ ! -d "openmemory-src" ]; then
+            echo "📦 Cloning OpenMemory from GitHub..."
+            git clone https://github.com/CaviraOSS/OpenMemory.git openmemory-src
+            echo "✅ OpenMemory source cloned"
+          else
+            echo "✅ OpenMemory source already exists"
+          fi
 
-# Start services
-echo "🚀 Starting services..."
-docker-compose down
-docker-compose up -d --build
-
-echo "✅ Deployment complete!"
-docker-compose ps
-ENDSSH
+          # Start services
+          echo "🚀 Starting services..."
+          docker-compose down
+          docker-compose up -d --build
+          echo "✅ Deployment complete!"
+          docker-compose ps
+          ENDSSH
 
       - name: Verify deployment
         env:
@@ -85,10 +84,12 @@ ENDSSH
           VULTR_USER: ${{ github.event.inputs.vultr_user || secrets.VULTR_USER || 'root' }}
           SSH_PRIVATE_KEY: ${{ secrets.VULTR_SSH_KEY }}
         run: |
+          # Setup SSH again (each step runs in a clean shell)
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/vultr_key
           chmod 600 ~/.ssh/vultr_key
           ssh-keyscan -H $VULTR_HOST >> ~/.ssh/known_hosts
 
+          # Verify running containers
           ssh -i ~/.ssh/vultr_key $VULTR_USER@$VULTR_HOST "cd /opt/docker-scrapers && docker-compose ps"
           echo "✅ Services running at http://$VULTR_HOST"
