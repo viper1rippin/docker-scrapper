@@ -12,40 +12,15 @@ services:
       - playwright
       - puppeteer
       - selenium
-      - universal-sandbox
+      - universal  # ← Changed from universal-sandbox
     restart: always
     networks:
       - scraper-network
 
-  playwright:
-    build: ./playwright
-    environment:
-      - API_KEY=${API_KEY}
-    restart: always
-    shm_size: 2gb
-    networks:
-      - scraper-network
+  # ... other services ...
 
-  puppeteer:
-    build: ./puppeteer
-    environment:
-      - API_KEY=${API_KEY}
-    restart: always
-    shm_size: 2gb
-    networks:
-      - scraper-network
-
-  selenium:
-    build: ./selenium
-    environment:
-      - API_KEY=${API_KEY}
-    restart: always
-    shm_size: 2gb
-    networks:
-      - scraper-network
-
-  universal-sandbox:
-    build: ./universal-sandbox
+  universal:  # ← Changed from universal-sandbox
+    build: ./universal  # ← Changed from ./universal-sandbox
     environment:
       - API_KEY=${API_KEY}
       - PORT=8000
